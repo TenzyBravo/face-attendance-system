@@ -1,0 +1,6 @@
+﻿venv/
+__pycache__/
+*.pyc
+Attendance folder/
+captured_frame.jpg
+*.rgb

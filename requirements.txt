@@ -1,0 +1,23 @@
+# Face Recognition Attendance System - Local Setup
+# Python 3.8-3.10 recommended (face_recognition has compatibility issues with newer versions)
+
+# Core dependencies
+opencv-python==4.8.1.78
+numpy>=1.21.0,<2.0.0
+Pillow>=9.0.0
+
+# Face recognition (requires dlib - see installation notes)
+face_recognition==1.3.0
+dlib==19.24.2
+
+# Anti-spoofing model
+tensorflow>=2.10.0,<2.16.0
+
+# Email functionality
+secure-smtplib>=0.1.1
+
+# Timezone support
+pytz>=2023.3
+
+# Optional: For better performance on supported GPUs
+# tensorflow-gpu>=2.10.0
