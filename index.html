@@ -1,0 +1,1599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>FACE_ATTENDANCE_SYSTEM // TenzyBravo</title>
+<meta name="description" content="Real-time facial recognition attendance protocol. Detects faces. Rejects spoofs. Marks attendance. Notifies guardians. Local-first." />
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Major+Mono+Display&family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;0,600;1,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --bg: #0a0b0e;
+    --bg-2: #111317;
+    --bg-3: #16191e;
+    --ink: #ebe5d6;
+    --ink-2: #8a8578;
+    --ink-3: #4a4842;
+    --accent: #ffb300;
+    --accent-2: #ffc940;
+    --accent-dim: rgba(255, 179, 0, 0.18);
+    --danger: #d44a3c;
+    --success: #7dba5f;
+    --border: rgba(235, 229, 214, 0.08);
+    --border-strong: rgba(235, 229, 214, 0.15);
+    --border-amber: rgba(255, 179, 0, 0.35);
+
+    --display: "Major Mono Display", monospace;
+    --body: "IBM Plex Mono", "Courier New", monospace;
+    --editorial: "Instrument Serif", Georgia, serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--body);
+    font-weight: 300;
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 100vh;
+    overflow-x: hidden;
+    background-image:
+      radial-gradient(ellipse 80% 50% at 50% -20%, rgba(255, 179, 0, 0.06), transparent 60%),
+      linear-gradient(180deg, var(--bg) 0%, #07080a 100%);
+  }
+
+  /* faint grid background */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(235, 229, 214, 0.018) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(235, 229, 214, 0.018) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* faint scanline */
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 0, 0, 0.15) 2px,
+      rgba(0, 0, 0, 0.15) 3px
+    );
+    pointer-events: none;
+    z-index: 1;
+    mix-blend-mode: multiply;
+    opacity: 0.5;
+  }
+
+  .wrap {
+    position: relative;
+    z-index: 2;
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 32px;
+  }
+
+  /* ============ TOP BAR ============ */
+  .topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 22px 32px;
+    border-bottom: 1px solid var(--border);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+    position: relative;
+    z-index: 2;
+  }
+
+  .topbar .logo {
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .topbar .logo .brackets {
+    color: var(--accent);
+  }
+
+  .topbar .nav {
+    display: flex;
+    gap: 28px;
+    align-items: center;
+  }
+
+  .topbar .nav a {
+    color: var(--ink-2);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+
+  .topbar .nav a:hover { color: var(--accent); }
+
+  .status-pip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--success);
+  }
+
+  .status-pip::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    background: var(--success);
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--success);
+    animation: pulse 1.8s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.35; }
+  }
+
+  /* ============ HERO ============ */
+  .hero {
+    padding: 80px 0 100px;
+    position: relative;
+    display: grid;
+    grid-template-columns: 1.3fr 1fr;
+    gap: 60px;
+    align-items: center;
+  }
+
+  .hero-left .eyebrow {
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 32px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .hero-left .eyebrow::before {
+    content: "";
+    width: 32px;
+    height: 1px;
+    background: var(--accent);
+  }
+
+  .hero-title {
+    font-family: var(--display);
+    font-size: clamp(2.4rem, 5.5vw, 4.4rem);
+    line-height: 0.95;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+    margin-bottom: 28px;
+    text-transform: lowercase;
+  }
+
+  .hero-title .accent {
+    color: var(--accent);
+  }
+
+  .hero-title .line {
+    display: block;
+    opacity: 0;
+    transform: translateY(20px);
+    animation: rise 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+  }
+
+  .hero-title .line:nth-child(1) { animation-delay: 0.1s; }
+  .hero-title .line:nth-child(2) { animation-delay: 0.25s; }
+  .hero-title .line:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes rise {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .tagline {
+    font-family: var(--editorial);
+    font-style: italic;
+    font-size: 1.5rem;
+    color: var(--ink-2);
+    margin-bottom: 36px;
+    max-width: 480px;
+    line-height: 1.3;
+    opacity: 0;
+    animation: rise 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+    animation-delay: 0.55s;
+  }
+
+  .hero-body {
+    color: var(--ink-2);
+    max-width: 480px;
+    margin-bottom: 44px;
+    line-height: 1.7;
+    opacity: 0;
+    animation: rise 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+    animation-delay: 0.7s;
+  }
+
+  .cta-row {
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+    opacity: 0;
+    animation: rise 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+    animation-delay: 0.85s;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 22px;
+    font-family: var(--body);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    text-decoration: none;
+    border: 1px solid var(--border-strong);
+    background: transparent;
+    color: var(--ink);
+    cursor: pointer;
+    transition: all 0.25s;
+    position: relative;
+  }
+
+  .btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(255, 179, 0, 0.04);
+  }
+
+  .btn.primary {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(255, 179, 0, 0.04);
+  }
+
+  .btn.primary:hover {
+    background: var(--accent);
+    color: var(--bg);
+  }
+
+  .btn .arrow {
+    transition: transform 0.25s;
+  }
+
+  .btn:hover .arrow { transform: translateX(4px); }
+
+  /* ============ HERO SCAN PANEL ============ */
+  .scan-panel {
+    position: relative;
+    aspect-ratio: 4/5;
+    background: var(--bg-2);
+    border: 1px solid var(--border-strong);
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .scan-panel .scan-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    color: var(--ink-3);
+    text-transform: uppercase;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px dashed var(--border);
+  }
+
+  .scan-header .live {
+    color: var(--success);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .scan-header .live::before {
+    content: "●";
+    animation: pulse 1.4s ease-in-out infinite;
+  }
+
+  .scan-stage {
+    flex: 1;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background:
+      radial-gradient(circle at 50% 40%, rgba(255, 179, 0, 0.05), transparent 60%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.01), rgba(0, 0, 0, 0.2));
+    overflow: hidden;
+  }
+
+  /* the abstract subject */
+  .subject {
+    position: relative;
+    width: 60%;
+    height: 80%;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+  }
+
+  .subject svg {
+    width: 100%;
+    height: 100%;
+    opacity: 0.4;
+  }
+
+  /* corner brackets that lock on */
+  .lock-frame {
+    position: absolute;
+    top: 10%;
+    left: 15%;
+    right: 15%;
+    bottom: 18%;
+    pointer-events: none;
+  }
+
+  .corner {
+    position: absolute;
+    width: 28px;
+    height: 28px;
+    border: 2px solid var(--accent);
+    opacity: 0;
+    animation: lockOn 0.4s ease-out forwards;
+  }
+
+  .corner.tl { top: 0; left: 0; border-right: none; border-bottom: none; animation-delay: 1.2s; }
+  .corner.tr { top: 0; right: 0; border-left: none; border-bottom: none; animation-delay: 1.35s; }
+  .corner.br { bottom: 0; right: 0; border-left: none; border-top: none; animation-delay: 1.5s; }
+  .corner.bl { bottom: 0; left: 0; border-right: none; border-top: none; animation-delay: 1.65s; }
+
+  @keyframes lockOn {
+    0% { opacity: 0; transform: scale(1.4); }
+    60% { opacity: 1; transform: scale(0.95); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+
+  /* horizontal sweep */
+  .sweep {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    box-shadow: 0 0 8px var(--accent);
+    top: 50%;
+    opacity: 0;
+    animation: sweepDown 2.4s ease-in-out 0.2s 1;
+  }
+
+  @keyframes sweepDown {
+    0% { top: 0%; opacity: 0; }
+    20% { opacity: 1; }
+    80% { opacity: 1; }
+    100% { top: 100%; opacity: 0; }
+  }
+
+  .subject-label {
+    position: absolute;
+    bottom: 14%;
+    left: 18%;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+    background: rgba(10, 11, 14, 0.7);
+    padding: 4px 8px;
+    border: 1px solid var(--border-amber);
+    opacity: 0;
+    animation: rise 0.5s ease-out 1.9s forwards;
+  }
+
+  .subject-label .conf {
+    color: var(--ink);
+    margin-left: 8px;
+  }
+
+  .scan-footer {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px dashed var(--border);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .scan-footer .field {
+    color: var(--ink-3);
+  }
+
+  .scan-footer .field .v {
+    display: block;
+    color: var(--ink);
+    margin-top: 4px;
+    letter-spacing: 0.04em;
+  }
+
+  /* corner registration marks on the scan panel */
+  .scan-panel::before, .scan-panel::after,
+  .scan-panel > .reg-bl, .scan-panel > .reg-br {
+    content: "+";
+    position: absolute;
+    color: var(--ink-3);
+    font-size: 16px;
+    line-height: 1;
+  }
+  .scan-panel::before { top: -8px; left: -8px; }
+  .scan-panel::after { top: -8px; right: -8px; }
+  .scan-panel .reg-bl { bottom: -8px; left: -8px; }
+  .scan-panel .reg-br { bottom: -8px; right: -8px; }
+
+  /* metadata strip */
+  .meta-strip {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 18px 0;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    color: var(--ink-3);
+    text-transform: uppercase;
+  }
+
+  .meta-strip .group { display: flex; gap: 28px; }
+
+  .meta-strip span b {
+    color: var(--ink);
+    font-weight: 400;
+    margin-left: 6px;
+  }
+
+  /* ============ SECTIONS ============ */
+  .section {
+    padding: 100px 0;
+    position: relative;
+  }
+
+  .section-label {
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .section-label::before {
+    content: "";
+    display: inline-block;
+    width: 4px;
+    height: 14px;
+    background: var(--accent);
+  }
+
+  .section-title {
+    font-family: var(--display);
+    font-size: clamp(1.8rem, 3.5vw, 2.8rem);
+    line-height: 1.05;
+    margin-bottom: 18px;
+    text-transform: lowercase;
+    max-width: 720px;
+  }
+
+  .section-intro {
+    color: var(--ink-2);
+    max-width: 580px;
+    margin-bottom: 64px;
+    line-height: 1.7;
+  }
+
+  /* ============ CAPABILITIES ============ */
+  .cap-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+  }
+
+  .cap-card {
+    background: var(--bg);
+    padding: 36px 32px;
+    position: relative;
+    transition: background 0.3s;
+  }
+
+  .cap-card:hover {
+    background: var(--bg-2);
+  }
+
+  .cap-card:hover .cap-num {
+    color: var(--accent);
+  }
+
+  .cap-num {
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    color: var(--ink-3);
+    margin-bottom: 24px;
+    transition: color 0.3s;
+  }
+
+  .cap-title {
+    font-family: var(--display);
+    font-size: 1.5rem;
+    line-height: 1.1;
+    margin-bottom: 14px;
+    text-transform: lowercase;
+  }
+
+  .cap-meta {
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 18px;
+  }
+
+  .cap-body {
+    color: var(--ink-2);
+    line-height: 1.65;
+    font-size: 13px;
+  }
+
+  /* ============ PIPELINE ============ */
+  .pipeline-wrap {
+    overflow-x: auto;
+    margin: 0 -32px;
+    padding: 0 32px 20px;
+  }
+
+  .pipeline {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(150px, 1fr));
+    gap: 0;
+    position: relative;
+    min-width: 900px;
+  }
+
+  .stage {
+    position: relative;
+    padding: 0 8px;
+    text-align: center;
+  }
+
+  .stage .stage-num {
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    color: var(--ink-3);
+    margin-bottom: 16px;
+  }
+
+  .stage .node {
+    width: 88px;
+    height: 88px;
+    margin: 0 auto 20px;
+    border: 1px solid var(--border-strong);
+    background: var(--bg-2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    transition: all 0.3s;
+  }
+
+  .stage:hover .node {
+    border-color: var(--accent);
+    background: rgba(255, 179, 0, 0.04);
+  }
+
+  .stage .node svg {
+    width: 32px;
+    height: 32px;
+    stroke: var(--ink);
+    stroke-width: 1.2;
+    fill: none;
+    transition: stroke 0.3s;
+  }
+
+  .stage:hover .node svg { stroke: var(--accent); }
+
+  /* connecting lines */
+  .stage:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    top: calc(10px + 44px); /* num + half-node */
+    left: calc(50% + 44px);
+    width: calc(100% - 88px);
+    height: 1px;
+    background: var(--border-strong);
+    z-index: 0;
+  }
+
+  /* animated data packet */
+  .stage:not(:last-child)::before {
+    content: "";
+    position: absolute;
+    top: calc(10px + 44px - 2px);
+    left: calc(50% + 44px);
+    width: 6px;
+    height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--accent);
+    animation: dataPacket 4s linear infinite;
+    z-index: 1;
+  }
+
+  .stage:nth-child(1):not(:last-child)::before { animation-delay: 0s; }
+  .stage:nth-child(2):not(:last-child)::before { animation-delay: 0.6s; }
+  .stage:nth-child(3):not(:last-child)::before { animation-delay: 1.2s; }
+  .stage:nth-child(4):not(:last-child)::before { animation-delay: 1.8s; }
+  .stage:nth-child(5):not(:last-child)::before { animation-delay: 2.4s; }
+
+  @keyframes dataPacket {
+    0% { transform: translateX(0); opacity: 0; }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    100% { transform: translateX(calc(100% - 6px)); opacity: 0; }
+  }
+
+  .stage-title {
+    font-family: var(--display);
+    font-size: 0.85rem;
+    text-transform: lowercase;
+    margin-bottom: 8px;
+  }
+
+  .stage-tech {
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    color: var(--ink-3);
+    line-height: 1.5;
+  }
+
+  /* ============ CONSOLE (LIVE VIEW) ============ */
+  .console-grid {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 24px;
+  }
+
+  /* mock camera window */
+  .cam-window {
+    background: #000;
+    border: 1px solid var(--border-strong);
+    aspect-ratio: 4/3;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .cam-titlebar {
+    background: var(--bg-3);
+    padding: 8px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    color: var(--ink-2);
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .cam-titlebar .dots {
+    display: flex;
+    gap: 6px;
+  }
+
+  .cam-titlebar .dots i {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--ink-3);
+  }
+
+  .cam-stage {
+    height: calc(100% - 32px);
+    background:
+      radial-gradient(circle at 50% 50%, rgba(125, 186, 95, 0.05), transparent 60%),
+      #0a0c08;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .cam-stage::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 3px,
+      rgba(125, 186, 95, 0.04) 3px,
+      rgba(125, 186, 95, 0.04) 4px
+    );
+    pointer-events: none;
+  }
+
+  .cam-status {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    right: 12px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    color: var(--ink-2);
+    text-transform: uppercase;
+    z-index: 3;
+  }
+
+  .cam-status .pip {
+    color: var(--success);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .cam-status .pip::before {
+    content: "●";
+    animation: pulse 1.4s ease-in-out infinite;
+  }
+
+  /* detected face in cam view */
+  .cam-face {
+    position: absolute;
+    top: 22%;
+    left: 35%;
+    width: 30%;
+    height: 50%;
+    border: 2px solid var(--success);
+    z-index: 2;
+  }
+
+  .cam-face::before {
+    content: "NAGASESHU  94%";
+    position: absolute;
+    top: -22px;
+    left: -2px;
+    background: var(--success);
+    color: #061306;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    padding: 3px 8px;
+    font-weight: 500;
+  }
+
+  .cam-face-silhouette {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    opacity: 0.18;
+  }
+
+  .cam-face-silhouette svg {
+    width: 75%;
+    height: 90%;
+    fill: var(--success);
+  }
+
+  /* attendance log */
+  .log-panel {
+    background: var(--bg-2);
+    border: 1px solid var(--border-strong);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .log-header {
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    color: var(--ink-2);
+    text-transform: uppercase;
+  }
+
+  .log-header .file {
+    color: var(--ink);
+  }
+
+  .log-body {
+    flex: 1;
+    padding: 18px;
+    font-size: 12px;
+    line-height: 2;
+    color: var(--ink-2);
+    overflow: hidden;
+  }
+
+  .log-body .line {
+    opacity: 0;
+    animation: typeIn 0.4s ease-out forwards;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+
+  .log-body .line:nth-child(1) { animation-delay: 0.2s; }
+  .log-body .line:nth-child(2) { animation-delay: 0.8s; }
+  .log-body .line:nth-child(3) { animation-delay: 1.4s; }
+  .log-body .line:nth-child(4) { animation-delay: 2.0s; }
+  .log-body .line:nth-child(5) { animation-delay: 2.6s; }
+  .log-body .line:nth-child(6) { animation-delay: 3.2s; }
+  .log-body .line:nth-child(7) { animation-delay: 3.8s; }
+
+  @keyframes typeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .log-body .line .name { color: var(--ink); }
+  .log-body .line .login { color: var(--success); }
+  .log-body .line .logout { color: var(--accent); }
+  .log-body .line .arrow { color: var(--accent); margin-right: 8px; }
+
+  .log-body .cursor {
+    display: inline-block;
+    width: 8px;
+    height: 13px;
+    background: var(--accent);
+    animation: blink 1s steps(2) infinite;
+    vertical-align: middle;
+    margin-left: 4px;
+  }
+
+  @keyframes blink {
+    50% { opacity: 0; }
+  }
+
+  .status-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    margin-top: 24px;
+  }
+
+  .status-cell {
+    background: var(--bg);
+    padding: 18px;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+  }
+
+  .status-cell .v {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    color: var(--ink);
+    font-size: 12px;
+    letter-spacing: 0.05em;
+  }
+
+  .status-cell .v::before {
+    content: "●";
+    color: var(--success);
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+
+  /* ============ DEPLOY ============ */
+  .deploy-grid {
+    display: grid;
+    grid-template-columns: 1fr 1.2fr;
+    gap: 48px;
+    align-items: start;
+  }
+
+  .steps {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .step {
+    display: grid;
+    grid-template-columns: 56px 1fr;
+    gap: 20px;
+    padding-bottom: 24px;
+    border-bottom: 1px dashed var(--border);
+  }
+
+  .step:last-child { border-bottom: none; }
+
+  .step-num {
+    font-family: var(--display);
+    font-size: 1.8rem;
+    color: var(--accent);
+    line-height: 1;
+  }
+
+  .step h4 {
+    font-family: var(--display);
+    font-size: 1rem;
+    text-transform: lowercase;
+    margin-bottom: 8px;
+    font-weight: normal;
+  }
+
+  .step p {
+    color: var(--ink-2);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .code-block {
+    background: var(--bg-2);
+    border: 1px solid var(--border-strong);
+    position: relative;
+  }
+
+  .code-block .code-header {
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    color: var(--ink-2);
+    text-transform: uppercase;
+  }
+
+  .code-block .code-header .file { color: var(--ink); }
+
+  .code-block pre {
+    padding: 22px 24px;
+    font-family: var(--body);
+    font-size: 12.5px;
+    line-height: 1.9;
+    overflow-x: auto;
+    color: var(--ink);
+  }
+
+  .code-block pre .cmt { color: var(--ink-3); }
+  .code-block pre .cmd { color: var(--accent); }
+  .code-block pre .arg { color: var(--ink-2); }
+
+  /* ============ ZONES ============ */
+  .zones-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+  }
+
+  .zone {
+    background: var(--bg);
+    padding: 36px 24px;
+    transition: background 0.3s;
+    position: relative;
+  }
+
+  .zone:hover {
+    background: var(--bg-2);
+  }
+
+  .zone-icon {
+    width: 36px;
+    height: 36px;
+    margin-bottom: 20px;
+    color: var(--ink-2);
+    transition: color 0.3s;
+  }
+
+  .zone:hover .zone-icon { color: var(--accent); }
+
+  .zone-title {
+    font-family: var(--display);
+    font-size: 1.1rem;
+    text-transform: lowercase;
+    margin-bottom: 8px;
+  }
+
+  .zone-desc {
+    font-size: 12px;
+    color: var(--ink-2);
+    line-height: 1.6;
+  }
+
+  /* ============ DIVIDER ============ */
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 0;
+    position: relative;
+  }
+
+  .divider::before, .divider::after {
+    content: "+";
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--ink-3);
+    font-size: 14px;
+  }
+  .divider::before { left: -8px; }
+  .divider::after { right: -8px; }
+
+  /* ============ FOOTER ============ */
+  footer {
+    padding: 80px 0 60px;
+    border-top: 1px solid var(--border);
+    margin-top: 80px;
+    position: relative;
+    z-index: 2;
+  }
+
+  .footer-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    gap: 60px;
+    margin-bottom: 60px;
+  }
+
+  .footer-grid h5 {
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 20px;
+    font-weight: normal;
+  }
+
+  .footer-grid .big {
+    font-family: var(--display);
+    font-size: 1.6rem;
+    line-height: 1.2;
+    color: var(--ink);
+    text-transform: lowercase;
+    margin-bottom: 18px;
+  }
+
+  .footer-grid .lede {
+    color: var(--ink-2);
+    font-size: 13px;
+    line-height: 1.7;
+    max-width: 380px;
+  }
+
+  .footer-grid ul {
+    list-style: none;
+  }
+
+  .footer-grid li { margin-bottom: 12px; }
+
+  .footer-grid a {
+    color: var(--ink-2);
+    text-decoration: none;
+    font-size: 12px;
+    letter-spacing: 0.05em;
+    transition: color 0.2s;
+  }
+
+  .footer-grid a:hover { color: var(--accent); }
+
+  .footer-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 32px;
+    border-top: 1px solid var(--border);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    color: var(--ink-3);
+    text-transform: uppercase;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .footer-bottom .end-mark {
+    color: var(--accent);
+  }
+
+  /* ============ RESPONSIVE ============ */
+  @media (max-width: 900px) {
+    .wrap { padding: 0 20px; }
+    .topbar { padding: 18px 20px; flex-wrap: wrap; gap: 12px; }
+    .topbar .nav { gap: 18px; }
+    .hero { grid-template-columns: 1fr; padding: 50px 0 60px; gap: 40px; }
+    .scan-panel { aspect-ratio: 4/4.5; }
+    .cap-grid { grid-template-columns: 1fr; }
+    .console-grid { grid-template-columns: 1fr; }
+    .deploy-grid { grid-template-columns: 1fr; gap: 32px; }
+    .zones-grid { grid-template-columns: 1fr 1fr; }
+    .footer-grid { grid-template-columns: 1fr; gap: 40px; }
+    .meta-strip { flex-direction: column; gap: 12px; align-items: flex-start; }
+    .meta-strip .group { flex-wrap: wrap; gap: 16px; }
+    .section { padding: 60px 0; }
+  }
+
+  @media (max-width: 560px) {
+    .zones-grid { grid-template-columns: 1fr; }
+    .topbar .nav a:not(.status-pip) { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="logo">
+    <span class="brackets">[</span>
+    <span>TENZYBRAVO / FACE_ATTENDANCE_SYSTEM</span>
+    <span class="brackets">]</span>
+  </div>
+  <div class="nav">
+    <a href="https://github.com/TenzyBravo/face-attendance-system" target="_blank" rel="noopener">GITHUB</a>
+    <a href="https://github.com/TenzyBravo/face-attendance-system/blob/main/SETUP_GUIDE.md" target="_blank" rel="noopener">SETUP</a>
+    <a href="#deploy">DEPLOY</a>
+    <span class="status-pip">ONLINE</span>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-left">
+      <div class="eyebrow">v1.0 / Local Edition / OpenCV + Keras</div>
+      <h1 class="hero-title">
+        <span class="line">real-time</span>
+        <span class="line">facial recognition</span>
+        <span class="line"><span class="accent">attendance</span> protocol.</span>
+      </h1>
+      <p class="tagline">It sees them. It logs them. It tells their guardians.</p>
+      <p class="hero-body">
+        A local-first attendance system that watches a webcam feed, detects faces, rejects
+        spoofed ones, recognizes who's standing there, and quietly writes it all down.
+        No cloud. No subscription. Just Python and a camera.
+      </p>
+      <div class="cta-row">
+        <a href="https://github.com/TenzyBravo/face-attendance-system" class="btn primary" target="_blank" rel="noopener">
+          <span>VIEW SOURCE</span>
+          <span class="arrow">→</span>
+        </a>
+        <a href="#deploy" class="btn">
+          <span>RUN LOCALLY</span>
+          <span class="arrow">↓</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- HERO SCAN PANEL -->
+    <div class="scan-panel">
+      <span class="reg-bl"></span>
+      <span class="reg-br"></span>
+      <div class="scan-header">
+        <span>SUBJECT_ID :: 0x2A4F</span>
+        <span class="live">LIVE</span>
+      </div>
+      <div class="scan-stage">
+        <div class="subject">
+          <!-- abstract head silhouette -->
+          <svg viewBox="0 0 200 280" xmlns="http://www.w3.org/2000/svg">
+            <path d="M100 30
+                     C 65 30, 50 60, 50 95
+                     C 50 130, 60 155, 75 165
+                     L 75 195
+                     C 50 210, 30 225, 25 280
+                     L 175 280
+                     C 170 225, 150 210, 125 195
+                     L 125 165
+                     C 140 155, 150 130, 150 95
+                     C 150 60, 135 30, 100 30 Z"
+                  fill="none" stroke="currentColor" stroke-width="1.2"
+                  style="color: var(--ink-2);"/>
+          </svg>
+          <div class="lock-frame">
+            <div class="corner tl"></div>
+            <div class="corner tr"></div>
+            <div class="corner br"></div>
+            <div class="corner bl"></div>
+          </div>
+        </div>
+        <div class="sweep"></div>
+        <div class="subject-label">MATCH<span class="conf">94.2%</span></div>
+      </div>
+      <div class="scan-footer">
+        <div class="field">FRAME<span class="v">0x2A4F</span></div>
+        <div class="field">CONFIDENCE<span class="v">94.2%</span></div>
+        <div class="field">SPOOF_SCORE<span class="v">0.03 / REAL</span></div>
+        <div class="field">LATENCY<span class="v">41 MS</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- META STRIP -->
+  <div class="meta-strip">
+    <div class="group">
+      <span>NODE<b>LUSAKA-001</b></span>
+      <span>LAT<b>-15.4067°</b></span>
+      <span>LON<b>28.2833°</b></span>
+    </div>
+    <div class="group">
+      <span>BUILD<b>2026.06.08</b></span>
+      <span>RUNTIME<b>PYTHON 3.10+</b></span>
+      <span>VISION<b>OPENCV 4.x</b></span>
+    </div>
+  </div>
+
+  <!-- CAPABILITIES -->
+  <section class="section" id="capabilities">
+    <div class="section-label">01 / Capabilities</div>
+    <h2 class="section-title">four layers between the camera<br>and the attendance log.</h2>
+    <p class="section-intro">
+      Every recognized face passes through the full pipeline before it lands on disk.
+      Detection finds the face. Anti-spoofing decides whether it's real. Recognition
+      identifies who it is. Notification tells the people who care.
+    </p>
+    <div class="cap-grid">
+      <div class="cap-card">
+        <div class="cap-num">[ 01 ]</div>
+        <h3 class="cap-title">face detection</h3>
+        <div class="cap-meta">HAAR CASCADE / 30 FPS</div>
+        <p class="cap-body">
+          Frames pull from the webcam at 30fps. A Haar Cascade classifier
+          locates faces in greyscale, returning bounding boxes for every
+          face in the frame, with padding and minimum-size filters tuned
+          for typical doorway distance.
+        </p>
+      </div>
+      <div class="cap-card">
+        <div class="cap-num">[ 02 ]</div>
+        <h3 class="cap-title">anti-spoofing</h3>
+        <div class="cap-meta">KERAS CNN / 160×160</div>
+        <p class="cap-body">
+          Every detected face is resized to 160×160 and run through a trained
+          binary classifier that distinguishes a living face from a printed
+          photo or screen replay. Scores above the threshold are dropped
+          before they ever reach the recognition stage.
+        </p>
+      </div>
+      <div class="cap-card">
+        <div class="cap-num">[ 03 ]</div>
+        <h3 class="cap-title">attendance state</h3>
+        <div class="cap-meta">LOGIN ⇄ LOGOUT / 5S COOLDOWN</div>
+        <p class="cap-body">
+          Each recognized identity toggles between login and logout in a
+          plain-text state file. A five-second cooldown per person prevents
+          the same face from being marked twice while they stand at the door.
+          Append-only history goes to attendance.txt with timezone-aware timestamps.
+        </p>
+      </div>
+      <div class="cap-card">
+        <div class="cap-num">[ 04 ]</div>
+        <h3 class="cap-title">guardian notify</h3>
+        <div class="cap-meta">SMTP / TLS / OPTIONAL</div>
+        <p class="cap-body">
+          When enabled, every successful mark fires an SMTP email over TLS to
+          the address registered against that identity — name, roll number,
+          action, date, time. Toggle on or off per deployment with a single
+          config flag.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- PIPELINE -->
+  <section class="section" id="pipeline">
+    <div class="section-label">02 / Pipeline</div>
+    <h2 class="section-title">from photon to permanent record.</h2>
+    <p class="section-intro">
+      A single frame flows through six stages. Each stage hands off only the data the next one needs.
+      Latency budget: well under 100ms per recognized identity on a mid-spec laptop.
+    </p>
+
+    <div class="pipeline-wrap">
+      <div class="pipeline">
+        <div class="stage">
+          <div class="stage-num">[ 01 ]</div>
+          <div class="node">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="4"/><path d="M3 8h4l2-3h6l2 3h4v11H3z"/></svg>
+          </div>
+          <div class="stage-title">capture</div>
+          <div class="stage-tech">OpenCV<br>VideoCapture</div>
+        </div>
+        <div class="stage">
+          <div class="stage-num">[ 02 ]</div>
+          <div class="node">
+            <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16"/><path d="M4 4l16 16M4 20L20 4"/></svg>
+          </div>
+          <div class="stage-title">detect</div>
+          <div class="stage-tech">Haar Cascade<br>frontalface</div>
+        </div>
+        <div class="stage">
+          <div class="stage-num">[ 03 ]</div>
+          <div class="node">
+            <svg viewBox="0 0 24 24"><path d="M12 2L3 6v6c0 5 4 9 9 10 5-1 9-5 9-10V6z"/><path d="M9 12l2 2 4-4"/></svg>
+          </div>
+          <div class="stage-title">verify</div>
+          <div class="stage-tech">Keras CNN<br>real / spoof</div>
+        </div>
+        <div class="stage">
+          <div class="stage-num">[ 04 ]</div>
+          <div class="node">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="10" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg>
+          </div>
+          <div class="stage-title">recognize</div>
+          <div class="stage-tech">face_recognition<br>dlib encodings</div>
+        </div>
+        <div class="stage">
+          <div class="stage-num">[ 05 ]</div>
+          <div class="node">
+            <svg viewBox="0 0 24 24"><path d="M5 4h11l3 3v13H5z"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>
+          </div>
+          <div class="stage-title">log</div>
+          <div class="stage-tech">attendance.txt<br>append-only</div>
+        </div>
+        <div class="stage">
+          <div class="stage-num">[ 06 ]</div>
+          <div class="node">
+            <svg viewBox="0 0 24 24"><path d="M3 6h18v12H3z"/><path d="M3 6l9 7 9-7"/></svg>
+          </div>
+          <div class="stage-title">notify</div>
+          <div class="stage-tech">SMTP / TLS<br>Gmail or self</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- LIVE VIEW -->
+  <section class="section" id="live">
+    <div class="section-label">03 / Live View</div>
+    <h2 class="section-title">what the operator sees.</h2>
+    <p class="section-intro">
+      A mock of the OpenCV window during a live session. Detected faces get a green box,
+      a name, and a confidence score. Spoofed ones get a red box and never make the log.
+    </p>
+
+    <div class="console-grid">
+      <!-- MOCK CAMERA WINDOW -->
+      <div>
+        <div class="cam-window">
+          <div class="cam-titlebar">
+            <div class="dots"><i></i><i></i><i></i></div>
+            <span>Face Recognition Attendance System</span>
+            <span>— □ ✕</span>
+          </div>
+          <div class="cam-stage">
+            <div class="cam-status">
+              <span>FACES: 1 | PRESS 'Q' TO QUIT</span>
+              <span class="pip">REC</span>
+            </div>
+            <div class="cam-face-silhouette">
+              <svg viewBox="0 0 200 280" xmlns="http://www.w3.org/2000/svg">
+                <path d="M100 30 C 65 30, 50 60, 50 95 C 50 130, 60 155, 75 165 L 75 195 C 50 210, 30 225, 25 280 L 175 280 C 170 225, 150 210, 125 195 L 125 165 C 140 155, 150 130, 150 95 C 150 60, 135 30, 100 30 Z"/>
+              </svg>
+            </div>
+            <div class="cam-face"></div>
+          </div>
+        </div>
+
+        <!-- STATUS ROW -->
+        <div class="status-row">
+          <div class="status-cell">
+            CAMERA
+            <div class="v">ONLINE</div>
+          </div>
+          <div class="status-cell">
+            ANTI-SPOOF
+            <div class="v">ACTIVE</div>
+          </div>
+          <div class="status-cell">
+            SMTP
+            <div class="v">READY</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ATTENDANCE LOG -->
+      <div class="log-panel">
+        <div class="log-header">
+          <span>attendance.txt</span>
+          <span class="file">// LIVE TAIL</span>
+        </div>
+        <div class="log-body">
+          <div class="line"><span class="arrow">▸</span><span class="name">NAGASESHU</span> <span class="login">login</span> &nbsp;marked on 08/06/2026 at 09:14:22</div>
+          <div class="line"><span class="arrow">▸</span><span class="name">VIKAS</span> <span class="login">login</span> &nbsp;marked on 08/06/2026 at 09:15:01</div>
+          <div class="line"><span class="arrow">▸</span><span class="name">SRISRI</span> <span class="login">login</span> &nbsp;marked on 08/06/2026 at 09:15:43</div>
+          <div class="line"><span class="arrow">▸</span><span class="name">VAMSI</span> <span class="login">login</span> &nbsp;marked on 08/06/2026 at 09:16:11</div>
+          <div class="line"><span class="arrow">▸</span><span class="name">NAGASESHU</span> <span class="logout">logout</span> marked on 08/06/2026 at 13:02:14</div>
+          <div class="line"><span class="arrow">▸</span><span class="name">SRISRI</span> <span class="logout">logout</span> marked on 08/06/2026 at 13:05:48</div>
+          <div class="line"><span class="arrow">▸</span><span class="name">NAGASESHU</span> <span class="login">login</span> &nbsp;marked on 08/06/2026 at 14:01:33<span class="cursor"></span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- DEPLOY -->
+  <section class="section" id="deploy">
+    <div class="section-label">04 / Deploy</div>
+    <h2 class="section-title">three commands. one camera.</h2>
+    <p class="section-intro">
+      Local edition runs on any machine with Python 3.10+ and a webcam.
+      No cloud setup, no API keys (unless you turn on email).
+    </p>
+
+    <div class="deploy-grid">
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">01</div>
+          <div>
+            <h4>clone the repo</h4>
+            <p>Grab the source and step into the directory. The Haar Cascade and anti-spoofing model are included.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">02</div>
+          <div>
+            <h4>install dependencies</h4>
+            <p>OpenCV, face_recognition (dlib), TensorFlow, pytz. Use a virtualenv. dlib will compile on first install — give it a few minutes.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">03</div>
+          <div>
+            <h4>run</h4>
+            <p>Drop reference photos of each person into face_recognition/ named after them. Run main.py. Press Q to quit, S to capture, R to reload faces.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="file">terminal</span>
+          <span>// QUICKSTART</span>
+        </div>
+<pre><span class="cmt"># 01 — clone</span>
+<span class="cmd">git</span> <span class="arg">clone https://github.com/TenzyBravo/face-attendance-system.git</span>
+<span class="cmd">cd</span> <span class="arg">face-attendance-system</span>
+
+<span class="cmt"># 02 — install (virtualenv recommended)</span>
+<span class="cmd">python</span> <span class="arg">-m venv venv</span>
+<span class="cmd">source</span> <span class="arg">venv/bin/activate</span>   <span class="cmt"># windows: venv\Scripts\activate</span>
+<span class="cmd">pip</span> <span class="arg">install -r requirements.txt</span>
+
+<span class="cmt"># 03 — run</span>
+<span class="cmd">python</span> <span class="arg">main.py</span>
+
+<span class="cmt"># controls inside the window:</span>
+<span class="cmt">#   q  → quit</span>
+<span class="cmt">#   s  → manual capture</span>
+<span class="cmt">#   r  → reload known faces</span></pre>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- ZONES -->
+  <section class="section" id="zones">
+    <div class="section-label">05 / Deployment Zones</div>
+    <h2 class="section-title">where this earns its keep.</h2>
+    <p class="section-intro">
+      Built for environments where attendance matters enough to automate, but not enough
+      to outsource. Schools, small offices, restricted-access rooms, anywhere the alternative
+      is a paper sheet by the door.
+    </p>
+
+    <div class="zones-grid">
+      <div class="zone">
+        <svg class="zone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+          <path d="M3 10l9-5 9 5-9 5z"/><path d="M6 12v5c2 1 4 2 6 2s4-1 6-2v-5"/>
+        </svg>
+        <h4 class="zone-title">schools</h4>
+        <p class="zone-desc">Replace paper registers. Notify parents the moment a student arrives or leaves.</p>
+      </div>
+      <div class="zone">
+        <svg class="zone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+          <rect x="3" y="6" width="18" height="14"/><path d="M3 10h18M9 14h2M13 14h2"/>
+        </svg>
+        <h4 class="zone-title">offices</h4>
+        <p class="zone-desc">Frictionless clock-in for small teams. No fobs, no apps, no fingerprint readers.</p>
+      </div>
+      <div class="zone">
+        <svg class="zone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+          <rect x="4" y="9" width="16" height="11"/><path d="M8 9V6a4 4 0 018 0v3"/>
+        </svg>
+        <h4 class="zone-title">restricted</h4>
+        <p class="zone-desc">Server rooms, vaults, archives. Anti-spoofing rejects photo and screen-replay attempts.</p>
+      </div>
+      <div class="zone">
+        <svg class="zone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+          <circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18"/>
+        </svg>
+        <h4 class="zone-title">events</h4>
+        <p class="zone-desc">Pre-registered guest entry. The reference photo is the ticket.</p>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="wrap">
+    <div class="footer-grid">
+      <div>
+        <h5>System</h5>
+        <p class="big">face_attendance<br>_system / v1</p>
+        <p class="lede">
+          A local-first face recognition attendance protocol. Cleaned and restructured
+          for production use from the original research notebook. Open-source under MIT.
+        </p>
+      </div>
+      <div>
+        <h5>Source</h5>
+        <ul>
+          <li><a href="https://github.com/TenzyBravo/face-attendance-system" target="_blank" rel="noopener">→ Repository</a></li>
+          <li><a href="https://github.com/TenzyBravo/face-attendance-system/blob/main/SETUP_GUIDE.md" target="_blank" rel="noopener">→ Setup Guide</a></li>
+          <li><a href="https://github.com/TenzyBravo/face-attendance-system/blob/main/main.py" target="_blank" rel="noopener">→ main.py</a></li>
+          <li><a href="https://github.com/TenzyBravo/face-attendance-system/blob/main/requirements.txt" target="_blank" rel="noopener">→ requirements.txt</a></li>
+        </ul>
+      </div>
+      <div>
+        <h5>Stack</h5>
+        <ul>
+          <li><a href="https://opencv.org/" target="_blank" rel="noopener">→ OpenCV</a></li>
+          <li><a href="https://github.com/ageitgey/face_recognition" target="_blank" rel="noopener">→ face_recognition</a></li>
+          <li><a href="https://www.tensorflow.org/" target="_blank" rel="noopener">→ TensorFlow / Keras</a></li>
+          <li><a href="https://www.python.org/" target="_blank" rel="noopener">→ Python 3.10+</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <div>// AUTHORED BY TENZYBRAVO &nbsp;·&nbsp; LUSAKA-NODE-001</div>
+      <div class="end-mark">[ END_OF_DOCUMENT ]</div>
+      <div>BUILD 2026.06.08 &nbsp;·&nbsp; MIT</div>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
