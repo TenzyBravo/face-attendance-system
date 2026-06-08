@@ -82,7 +82,7 @@ class Config:
     EMAIL_PASSWORD = "your_app_password"  # Use App Password, not regular password
     
     # Timezone
-    TIMEZONE = "Asia/Kolkata"
+   Set timezone to Africa/Lusaka
     
     # User database (name -> [email, roll_number])
     USER_DATABASE = {
